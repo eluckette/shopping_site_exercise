@@ -9,6 +9,7 @@ Authors: Joel Burton, Christian Fernandez, Meggie Mahnken.
 
 from flask import Flask, render_template, redirect, flash, session, request
 import jinja2
+from decimal import *
 
 import model
 
@@ -60,7 +61,6 @@ def show_melon(id):
 def shopping_cart():
     """Display content of shopping cart."""
     order = session.values()
-    # print 'ORDER = ', order
 
     total = 0
     for item in order:
@@ -79,11 +79,17 @@ def add_to_cart(id):
     order = model.Melon.get_by_id(id)
 
     if order:
-        session[order.id] = [order.common_name, order.price, 1, order.price]
-            
+        if str(id) in session:
+            session[str(order.id)] = [order.common_name, order.price, session[str(order.id)][2] + 1, session[str(order.id)][3] + order.price]
+            print "TRYING TO FIGURE THIS OUT: ", session[str(order.id)][2]
+        else:
+            session[str(order.id)] = [order.common_name, order.price, 1, order.price]
+
+        # order = {key:session[key]for key in session if key != 'logged_in_customer_email'}
         order = session.values()
         
         total = 0
+
         for item in order:
             total = total + item[3]
     
@@ -105,9 +111,19 @@ def process_login():
     dictionary, look up the user, and store them in the session.
     """
 
-    # TODO: Need to implement this!
+    error = None
+    if request.method == 'POST':
+        
+        customer = model.Customer.get_by_email(request.form['email'])
 
-    return "Oops! This needs to be implemented"
+        if customer and (customer.password == request.form['password']):
+            # session['logged_in_customer_email'] = request.form['email']
+            print 'SESSION: ', session
+            return render_template('homepage.html')
+        else:
+            error = 'Invalid email/password'
+            return render_template('login.html', error=error)
+    
 
 
 @app.route("/checkout")
